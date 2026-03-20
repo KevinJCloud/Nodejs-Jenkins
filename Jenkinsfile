@@ -1,52 +1,46 @@
-pipeline {
+pipeline{
   agent any
-  
-   tools {nodejs "node"}
-    
-  stages {
-    stage("Clone code from GitHub") {
-            steps {
-                script {
-                    checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'GITHUB_CREDENTIALS', url: 'https://github.com/devopshint/Deploy-NodeApp-to-AWS-EKS-using-Jenkins-Pipeline']])
-                }
-            }
-        }
-     
-    stage('Node JS Build') {
-      steps {
-        sh 'npm install'
-      }
-    }
-  
-     stage('Build Node JS Docker Image') {
-            steps {
-                script {
-                  sh 'docker build -t devopshint/node-app-1.0 .'
-                }
-            }
-        }
+  tools{
+   nodejs "node"
+  }
 
-
-        stage('Deploy Docker Image to DockerHub') {
-            steps {
-                script {
-                 withCredentials([string(credentialsId: 'devopshintdocker', variable: 'devopshintdocker')]) {
-                    sh 'docker login -u devopshint -p ${devopshintdocker}'
-            }
-            sh 'docker push devopshint/node-app-1.0'
-        }
-            }   
-        }
-         
-     stage('Deploying Node App to Kubernetes') {
-      steps {
-        script {
-          sh ('aws eks update-kubeconfig --name sample --region ap-south-1')
-          sh "kubectl get ns"
-          sh "kubectl apply -f nodejsapp.yaml"
-        }
+  stages{
+   stage( "git checkout"){
+     steps{
+      script {
+        checkout scmGit(branches: [[name: '*/main']],
+        extensions: [],
+        userRemoteConfigs: [[url: 'https://github.com/KevinJCloud/Nodejs-Jenkins.git']])
       }
-    }
+     }
+   }
+
+   stage( "Node build"){
+     steps{
+      script {
+        bat "npm install"
+      }
+     }
+   }
+
+   stage( "Docrizing the npm build"){
+     steps{
+      script {
+        bat "docker build -t kevinjcloud/nodejs:v1 ."
+      }
+     }
+   }
+
+   stage( "Pushing docker image to docker registry"){
+     steps{
+      script {
+             withCredentials([string(credentialsId: 'Docker-Passwd', variable: 'Password')]) {
+             bat "docker login -u kevinjcloud -p %Password%"
+              bat "docker push kevinjcloud/nodejs:v1"
+         }
+      }
+     }
+   }
 
   }
 }
